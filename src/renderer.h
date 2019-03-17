@@ -54,26 +54,31 @@ public:
 		updateMatrices();
 	}
 
-	static void enableTexture2D() {
-		if (!OpenGL::coreProfile()) glEnable(GL_TEXTURE_2D);
-		else glActiveTexture(GL_TEXTURE0);
-	}
-	static void disableTexture2D() {
-		if (!OpenGL::coreProfile()) glDisable(GL_TEXTURE_2D);
-	}
+	static void enableTexture2D() { if (!OpenGL::coreProfile()) glEnable(GL_TEXTURE_2D); }
+	static void disableTexture2D() { if (!OpenGL::coreProfile()) glDisable(GL_TEXTURE_2D); }
 	static void enableDepthOverwrite() { glDepthFunc(GL_ALWAYS); }
 	static void disableDepthOverwrite() { glDepthFunc(GL_LEQUAL); }
 	static void enableDepthTest() { glEnable(GL_DEPTH_TEST); }
 	static void disableDepthTest() { glDisable(GL_DEPTH_TEST); }
 	static void enableCullFace() { glEnable(GL_CULL_FACE); }
 	static void disableCullFace() { glDisable(GL_CULL_FACE); }
+	static void enableAlphaTest() {
+		if (!OpenGL::coreProfile()) glEnable(GL_ALPHA_TEST);
+		else shader().setUniform1i("AlphaTestEnabled", 1);
+	}
+	static void disableAlphaTest() {
+		if (!OpenGL::coreProfile()) glDisable(GL_ALPHA_TEST);
+		else shader().setUniform1i("AlphaTestEnabled", 0);
+	}
 	static void enableBlend() { glEnable(GL_BLEND); }
 	static void disableBlend() { glDisable(GL_BLEND); }
+	static void enableStencilTest() { glEnable(GL_STENCIL_TEST); }
+	static void disableStencilTest() { glDisable(GL_STENCIL_TEST); }
 
 	static void setClearColor(const Vec3f& col, float alpha = 0.0f) { glClearColor(col.x, col.y, col.z, alpha); }
 	static void setClearDepth(float depth) { glClearDepth(depth); }
 
-	static void clear() { glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); }
+	static void clear() { glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT); }
 	static void flush() { glFlush(); }
 	static void waitForComplete() { glFinish(); }
 	static void checkError();

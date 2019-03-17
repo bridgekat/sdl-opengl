@@ -5,6 +5,7 @@
 #include "debug.h"
 #include "common.h"
 #include "config.h"
+#include "renderer.h"
 
 #ifdef PROJECTNAME_TARGET_WINDOWS
 #	define GLCALLBACK __stdcall
@@ -31,6 +32,7 @@ Window::Window(const std::string& title, int width, int height):
 	static bool openglDebug = Config::getInt("OpenGL.Debugging", 0) != 0;
 	static bool coreProfile = Config::getInt("OpenGL.CoreProfile", 0) != 0;
 	static bool gles = Config::getInt("OpenGL.ES", 0) != 0;
+	static int swapInterval = Config::getInt("OpenGL.SwapInterval", 1);
 	if (gles) coreProfile = true;
 
 	if (openglDebug) SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_DEBUG_FLAG);
@@ -43,7 +45,8 @@ Window::Window(const std::string& title, int width, int height):
 		LogInfo("OpenGL profile: Compatibility");
 	}
 
-	mWindow = SDL_CreateWindow(mTitle.c_str(), 100, 100, mWidth, mHeight, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+	mWindow = SDL_CreateWindow(mTitle.c_str(), SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, mWidth, mHeight,
+		SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 
 	if (mWindow == nullptr) {
 		LogFatal("Failed to create SDL window!");
@@ -52,11 +55,9 @@ Window::Window(const std::string& title, int width, int height):
 
 	mContext = SDL_GL_CreateContext(mWindow);
 	makeCurrentDraw();
-
+	SDL_GL_SetSwapInterval(swapInterval);
+	
 	OpenGL::init(coreProfile);
-
-	SDL_GL_SetSwapInterval(0);
-
 	if (openglDebug) {
 		if (GLEW_ARB_debug_output) {
 			glDebugMessageCallbackARB(&glDebugCallback, nullptr);
@@ -71,7 +72,11 @@ Window::~Window() {
 	SDL_Quit();
 }
 
-void Window::pollEvents() {
+std::set<SDL_Scancode> Window::mKeyActed;
+
+void Window::pollEvents(bool waitForEvent) {
+	if (waitForEvent) SDL_WaitEvent(0);
+	
 	// Update mouse state
 	// Relative mode: motion = mMouse.xy, position = [not available]
 	// Absolute mode: motion = (mMouse.xy - mPrevMouse.xy), position = mMouse.xy
@@ -80,17 +85,19 @@ void Window::pollEvents() {
 		mMouse.left = buttons & SDL_BUTTON_LEFT;
 		mMouse.right = buttons & SDL_BUTTON_RIGHT;
 		mMouse.mid = buttons & SDL_BUTTON_MIDDLE;
-		mMouse.relative = true;
+		mMouse.locked = true;
 	} else {
 		mPrevMouse = mMouse;
 		Uint32 buttons = SDL_GetMouseState(&mMouse.x, &mMouse.y);
 		mMouse.left = buttons & SDL_BUTTON_LEFT;
 		mMouse.right = buttons & SDL_BUTTON_RIGHT;
 		mMouse.mid = buttons & SDL_BUTTON_MIDDLE;
-		if (mMouse.relative) mPrevMouse = mMouse;
-		mMouse.relative = false;
+		if (mMouse.locked) mPrevMouse = mMouse; // Switched just now
+		mPrevMouse.locked = mMouse.locked = false;
 	}
 
+	// TODO: make this static
+	mKeyActed.clear();
 	SDL_Event e;
 	while (SDL_PollEvent(&e)) {
 		switch (e.type) {
@@ -105,6 +112,9 @@ void Window::pollEvents() {
 				mHeight = e.window.data2;
 				break;
 			}
+			break;
+		case SDL_KEYDOWN:
+			mKeyActed.insert(e.key.keysym.scancode);
 			break;
 		}
 	}

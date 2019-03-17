@@ -9,6 +9,7 @@
 // RGB/RGBA texture image, pixels aligned
 class TextureImage {
 public:
+	TextureImage() = default;
 	TextureImage(int width, int height, int bytesPerPixel):
 		mWidth(width), mHeight(height), mBytesPerPixel(bytesPerPixel), mPitch(alignedPitch(mWidth * bytesPerPixel)),
 		mData(new unsigned char[mHeight * mPitch]) {
@@ -18,7 +19,7 @@ public:
 		mWidth(r.mWidth), mHeight(r.mHeight), mBytesPerPixel(r.mBytesPerPixel), mPitch(r.mPitch) {
 		std::swap(mData, r.mData);
 	}
-	TextureImage(const std::string& filename, bool masked = false) { loadFromBMP(filename, true, masked); }
+	TextureImage(const std::string& filename, bool masked = false) { loadFromBMP(filename, false, masked); }
 	~TextureImage() { if (mData != nullptr) delete[] mData; }
 
 	TextureImage& operator= (const TextureImage& r) {
@@ -28,11 +29,15 @@ public:
 		memcpy(mData, r.mData, mHeight * mPitch * sizeof(unsigned char));
 		return (*this);
 	}
+	
+	unsigned char& color(int x, int y, int c) { return mData[y * mPitch + x * mBytesPerPixel + c]; }
+	const unsigned char& color(int x, int y, int c) const { return mData[y * mPitch + x * mBytesPerPixel + c]; }
 
 	int width() const { return mWidth; }
 	int height() const { return mHeight; }
 	int pitch() const { return mPitch; }
 	int bytesPerPixel() const { return mBytesPerPixel; }
+	bool empty() const { return mWidth == 0 || mHeight == 0 || mBytesPerPixel == 0; }
 	const unsigned char* data() const { return mData; }
 
 	void copyFrom(const TextureImage& src, int x, int y, int srcx = 0, int srcy = 0);
@@ -48,7 +53,7 @@ public:
 	}
 
 private:
-	int mWidth = 0, mHeight = 0, mPitch = 0, mBytesPerPixel = 0;
+	int mWidth = 0, mHeight = 0, mBytesPerPixel = 0, mPitch = 0;
 	unsigned char* mData = nullptr;
 
 	void loadFromBMP(const std::string& filename, bool checkSize = true, bool masked = false);
@@ -58,6 +63,7 @@ class Texture {
 public:
 	Texture() = default;
 	Texture(const TextureImage& image, bool alpha = false, int maxLevels = -1) { load(image, alpha, maxLevels); }
+	~Texture() { if (mID > 0) glDeleteTextures(1, &mID); }
 
 	void load(const TextureImage& image, bool alpha = false, int maxLevels = -1);
 	TextureID id() const { return mID; }

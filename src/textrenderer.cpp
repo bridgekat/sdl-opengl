@@ -19,12 +19,12 @@ void TextRenderer::drawAscii(const Vec3f& pos, const std::string& text, float he
 		VertexArray va(6, VertexFormat(2, 3, 0, 3));
 		va.setColor({0.0f, 0.0f, 0.0f});
 		va.setTexture({1.0f - TexWidth / 2.0f / TexSize, TexHeight / 2.0f / TexSize});
+		va.addVertex({pos.x, pos.y, pos.z - Eps});
 		va.addVertex({pos.x, pos.y + height, pos.z - Eps});
-		va.addVertex({pos.x, pos.y, pos.z - Eps});
-		va.addVertex({pos.x + len, pos.y + height, pos.z - Eps});
-		va.addVertex({pos.x + len, pos.y + height, pos.z - Eps});
-		va.addVertex({pos.x, pos.y, pos.z - Eps});
 		va.addVertex({pos.x + len, pos.y, pos.z - Eps});
+		va.addVertex({pos.x + len, pos.y, pos.z - Eps});
+		va.addVertex({pos.x, pos.y + height, pos.z - Eps});
+		va.addVertex({pos.x + len, pos.y + height, pos.z - Eps});
 		VertexBuffer(va, false).render();
 	}
 	float offset = 0.0f;
@@ -36,17 +36,17 @@ void TextRenderer::drawAscii(const Vec3f& pos, const std::string& text, float he
 		float ty = ((curr / 16) * 16 + 16 - 10) / TexSize;
 		float tw = TexWidth * WidthExpand / 256.0f, th = TexHeight * HeightExpand / 256.0f;
 		va.setTexture({tx, 1.0f - ty});
+		va.addVertex({pos.x + offset, pos.y, pos.z});
+		va.setTexture({tx, 1.0f - ty - th});
 		va.addVertex({pos.x + offset, pos.y + height, pos.z});
-		va.setTexture({tx, 1.0f - ty - th});
-		va.addVertex({pos.x + offset, pos.y, pos.z});
 		va.setTexture({tx + tw, 1.0f - ty});
-		va.addVertex({pos.x + offset + width, pos.y + height, pos.z});
-		va.setTexture({tx + tw, 1.0f - ty});
-		va.addVertex({pos.x + offset + width, pos.y + height, pos.z});
-		va.setTexture({tx, 1.0f - ty - th});
-		va.addVertex({pos.x + offset, pos.y, pos.z});
-		va.setTexture({tx + tw, 1.0f - ty - th});
 		va.addVertex({pos.x + offset + width, pos.y, pos.z});
+		va.setTexture({tx + tw, 1.0f - ty});
+		va.addVertex({pos.x + offset + width, pos.y, pos.z});
+		va.setTexture({tx, 1.0f - ty - th});
+		va.addVertex({pos.x + offset, pos.y + height, pos.z});
+		va.setTexture({tx + tw, 1.0f - ty - th});
+		va.addVertex({pos.x + offset + width, pos.y + height, pos.z});
 		offset += width;
 	}
 	VertexBuffer(va, false).render();

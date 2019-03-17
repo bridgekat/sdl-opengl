@@ -9,9 +9,10 @@ class Vec3 {
 public:
 	T x, y, z;
 
-	Vec3() : x(), y(), z() {}
-	Vec3(T x_, T y_, T z_) : x(x_), y(y_), z(z_) {}
-	Vec3(T v) : x(v), y(v), z(v) {}
+	Vec3(): x(), y(), z() {}
+	Vec3(T x_, T y_, T z_): x(x_), y(y_), z(z_) {}
+	Vec3(T v): x(v), y(v), z(v) {}
+	Vec3(const T* v): x(v[0]), y(v[1]), z(v[2]) {}
 
 	template <typename U, std::enable_if_t<std::is_convertible<T, U>::value, int> = 0>
 	Vec3(const Vec3<U>& rhs): x(T(rhs.x)), y(T(rhs.y)), z(T(rhs.z)) {}
@@ -66,10 +67,14 @@ public:
 
 	Vec3 operator+ (const Vec3& r) const { return Vec3(x + r.x, y + r.y, z + r.z); }
 	Vec3 operator- (const Vec3& r) const { return Vec3(x - r.x, y - r.y, z - r.z); }
+	friend Vec3 operator- (const Vec3& vec) { return Vec3(-vec.x, -vec.y, -vec.z); }
+
 	Vec3 operator* (T r) const { return Vec3(x * r, y * r, z * r); }
 	Vec3 operator/ (T r) const { return Vec3(x / r, y / r, z / r); }
-
-	friend Vec3 operator- (const Vec3& vec) { return Vec3(-vec.x, -vec.y, -vec.z); }
+	
+	static T dot(const Vec3& l, const Vec3& r) { return l.x * r.x + l.y * r.y + l.z * r.z; }
+	static Vec3 cross(const Vec3& l, const Vec3& r) { return Vec3(l.y * r.z - l.z * r.y, l.z * r.x - l.x * r.z, l.x * r.y - l.y * r.x); }
+	
 	bool operator== (const Vec3& rhs) const { return x == rhs.x && y == rhs.y && z == rhs.z; }
 	bool operator!= (const Vec3& rhs) const { return !(rhs == *this); }
 

@@ -32,7 +32,7 @@ public:
 	VertexArray(unsigned int maxVertexes, const VertexFormat& format):
 		mMaxVertexes(maxVertexes), mVertexes(0), mFormat(format),
 		mData(new float[mMaxVertexes * format.vertexAttributeCount]),
-		mVertexAttributes(new float[format.vertexAttributeCount]) {}
+		mVertexAttributes(new float[format.vertexAttributeCount]) { clear(); }
 
 	~VertexArray() {
 		delete[] mData;
@@ -43,13 +43,12 @@ public:
 	VertexArray& operator=(const VertexArray&) = delete;
 
 	void clear() {
-		memset(mData, 0, mMaxVertexes * mFormat.vertexAttributeCount * sizeof(float));
 		memset(mVertexAttributes, 0, mFormat.vertexAttributeCount * sizeof(float));
 		mVertexes = 0;
 	}
 
 	// Set texture coordinates
-	void setTexture(size_t size, const float* texture) {
+	void setTexture(unsigned int size, const float* texture) {
 		Assert(size <= mFormat.textureCount);
 		memcpy(mVertexAttributes, texture, size * sizeof(float));
 	}
@@ -59,7 +58,7 @@ public:
 	}
 
 	// Set color value
-	void setColor(size_t size, const float* color) {
+	void setColor(unsigned int size, const float* color) {
 		Assert(size <= mFormat.colorCount);
 		memcpy(mVertexAttributes + mFormat.textureCount, color, size * sizeof(float));
 	}
@@ -69,7 +68,7 @@ public:
 	}
 
 	// Set normal vector
-	void setNormal(size_t size, const float* normal) {
+	void setNormal(unsigned int size, const float* normal) {
 		Assert(size <= mFormat.normalCount);
 		memcpy(mVertexAttributes + mFormat.textureCount + mFormat.colorCount, normal, size * sizeof(float));
 	}
@@ -79,16 +78,16 @@ public:
 	}
 
 	// Add vertex
-	void addVertex(const float* coords) {
-		auto cnt = mFormat.textureCount + mFormat.colorCount + mFormat.normalCount;
-		Assert(mVertexes * mFormat.vertexAttributeCount + cnt + mFormat.coordinateCount <= mMaxVertexes * mFormat.vertexAttributeCount);
-		memcpy(mData + mVertexes * mFormat.vertexAttributeCount, mVertexAttributes, cnt * sizeof(float));
-		memcpy(mData + mVertexes * mFormat.vertexAttributeCount + cnt, coords, mFormat.coordinateCount * sizeof(float));
+	void addVertex(unsigned int size, const float* coords) {
+		Assert(size <= mFormat.coordinateCount);
+		memcpy(mVertexAttributes + mFormat.textureCount + mFormat.colorCount + mFormat.normalCount, coords, size * sizeof(float));
+		Assert(mVertexes < mMaxVertexes);
+		memcpy(mData + mVertexes * mFormat.vertexAttributeCount, mVertexAttributes, mFormat.vertexAttributeCount * sizeof(float));
 		mVertexes++;
 	}
 
 	void addVertex(std::initializer_list<float> coords) {
-		addVertex(coords.begin());
+		addVertex(coords.size(), coords.begin());
 	}
 
 	void addPrimitive(unsigned int size, std::initializer_list<float> d) {
@@ -105,7 +104,7 @@ public:
 
 private:
 	// Max vertex count
-	const unsigned int mMaxVertexes;
+	const int mMaxVertexes;
 	// Vertex count
 	int mVertexes;
 	// Vertex array format
@@ -122,7 +121,7 @@ public:
 	VertexBuffer(VertexBuffer&& r): id(0), vao(0), vertexes(0) { swap(r); }
 	/*VertexBuffer(VertexBufferID id_, int vertexes_, const VertexFormat& format_):
 		id(id_), vertexes(vertexes_), format(format_) {}*/
-	explicit VertexBuffer(const VertexArray& va, bool staticDraw = true);
+	explicit VertexBuffer(const VertexArray& va, bool staticDraw = false);
 	~VertexBuffer() { destroy(); }
 
 	VertexBuffer& operator=(VertexBuffer&& r) {
@@ -139,7 +138,7 @@ public:
 		return false;
 	}
 	// Upload new data
-	void update(const VertexArray& va, bool staticDraw = true);
+	void update(const VertexArray& va, bool staticDraw = false);
 	// Swap
 	void swap(VertexBuffer& r) {
 		std::swap(id, r.id);

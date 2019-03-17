@@ -18,7 +18,7 @@ void TextureImage::loadFromBMP(const std::string& filename, bool checkSize, bool
 	mBytesPerPixel = masked ? 4 : 3;
 	mPitch = alignedPitch(mWidth * mBytesPerPixel);
 
-	if (checkSize && mWidth != mHeight || (1 << int(log2(mWidth))) != mWidth) {
+	if (checkSize && (mWidth != mHeight || (1 << int(log2(mWidth))) != mWidth)) {
 		LogWarning("Failed to load file \"" + filename + "\" as bitmap texture: unsupported image size (must be a square with side length 2 ^ n pixels)");
 		return;
 	}
@@ -72,7 +72,7 @@ TextureImage TextureImage::convert(int bytesPerPixel) const {
 			unsigned char* pSrc = mData + i * mPitch + j * mBytesPerPixel;
 			unsigned char r = 0, g = 0, b = 0, a = 255u;
 			if (mBytesPerPixel == 4) r = pSrc[0], g = pSrc[1], b = pSrc[2], a = pSrc[3];
-			else r = r = pSrc[0], g = pSrc[1], b = pSrc[2];
+			else r = pSrc[0], g = pSrc[1], b = pSrc[2];
 			if (res.mBytesPerPixel == 4) p[0] = r, p[1] = g, p[2] = b, p[3] = a;
 			else p[0] = r, p[1] = g, p[2] = b;
 		}
@@ -110,7 +110,7 @@ TextureImage TextureImage::resample(int width, int height) const {
 			for (int k = 0; k < mBytesPerPixel; k++) {
 				// TODO: use AABB to calculate an average color on destination area
 				int i1 = int(double(i) / height * mHeight), j1 = int(double(j) / width * mWidth);
-				res.mData[i * res.mPitch + j * res.mBytesPerPixel + k] = mData[i1 * mPitch + j1 * mBytesPerPixel + k];
+				res.mData[i * res.mPitch + j * res.mBytesPerPixel + k] = empty()? 0 : mData[i1 * mPitch + j1 * mBytesPerPixel + k];
 			}
 	return res;
 }

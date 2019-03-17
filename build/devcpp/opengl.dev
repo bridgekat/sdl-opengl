@@ -29,7 +29,7 @@ IncludeVersionInfo=0
 SupportXPThemes=0
 CompilerSet=1
 CompilerSettings=0000000000000000001000000
-UnitCount=29
+UnitCount=31
 
 [VersionInfo]
 Major=1
@@ -341,7 +341,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit30]
-FileName=..\..\src\bitmap.cpp
+FileName=..\..\src\gui.cpp
 CompileCpp=1
 Folder=
 Compile=1
@@ -351,7 +351,7 @@ OverrideBuildCmd=0
 BuildCmd=
 
 [Unit31]
-FileName=..\..\src\bitmap.h
+FileName=..\..\src\gui.h
 CompileCpp=1
 Folder=
 Compile=1
