@@ -6,6 +6,7 @@
 #include "common.h"
 #include "config.h"
 #include "renderer.h"
+#include <iostream>
 
 #ifdef PROJECTNAME_TARGET_WINDOWS
 #	define GLCALLBACK __stdcall

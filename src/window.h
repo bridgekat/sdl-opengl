@@ -7,7 +7,7 @@
 #include "debug.h"
 
 struct MouseState {
-	int x, y;
+	int x, y, wx, wy;
 	bool left, mid, right, locked;
 };
 

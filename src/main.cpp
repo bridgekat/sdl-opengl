@@ -14,7 +14,7 @@ int main(){
 	Config::load();
 
 	Window& win = Window::getDefaultWindow("OpenGL Application", 852, 480);
-
+	
 	Renderer::init();
 	TextRenderer::loadAscii(std::string(FontPath) + "Ascii.bmp");
 	Renderer::enableDepthTest();
@@ -44,7 +44,7 @@ int main(){
 	GUI::TrackBar param3TrackBar(Position(Point2D(0.0f, 0.0f), Point2D(+10, +90)), Position(Point2D(1.0f, 0.0f), Point2D(-10, +120)), 0.0, 10.0, 1.0, "Specular");
 	GUI::Label countLabel(Position(Point2D(0.0f, 1.0f), Point2D(+10, -40)), Position(Point2D(0.5f, 1.0f), Point2D(-5, -10)), "Count");
 	GUI::Button startButton(Position(Point2D(0.5f, 1.0f), Point2D(+5, -40)), Position(Point2D(1.0f, 1.0f), Point2D(-10, -10)), "OK");
-	GUI::ScrollArea scrollArea(Position(Point2D(0.0f, 0.0f), Point2D(+10, +10)), Position(Point2D(1.0f, 1.0f), Point2D(0, -10)), Point2D(500, 10000), Point2D(0.0f, 0.0f));
+	GUI::ScrollArea scrollArea(Position(Point2D(0.0f, 0.0f), Point2D(+10, +10)), Position(Point2D(1.0f, 1.0f), Point2D(0, -10)), Point2D(500, 800), Point2D(0.0f, 0.0f));
 	GUI::PictureBox picPictureBoxArray1[5] = {
 		GUI::PictureBox(Position(Point2D(0.0f, 0.0f), Point2D(+10, +10)), Position(Point2D(0.5f, 0.0f), Point2D(-10, +150)), ptex),
 		GUI::PictureBox(Position(Point2D(0.5f, 0.0f), Point2D(+10, +10)), Position(Point2D(1.0f, 0.0f), Point2D(-10, +150)), ptex),
@@ -92,7 +92,7 @@ int main(){
 
 			// Do rendering
 		} else {
-			Renderer::setClearColor(Vec3f(1.0f, 1.0f, 1.0f));
+			Renderer::setClearColor(Vec3f(0.1f, 0.1f, 0.1f));
 			Renderer::clear();
 			
 			Renderer::enableCullFace();

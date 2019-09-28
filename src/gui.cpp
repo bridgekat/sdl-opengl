@@ -5,25 +5,33 @@
 #include "textrenderer.h"
 
 namespace GUI {
-	// Colors
-	const float Color0[4] = {1.0f, 1.0f, 1.0f, 0.6f};
-	const float Color1[4] = {0.8f, 0.8f, 0.8f, 1.0f};
-	const float Color2[4] = {0.75f, 0.75f, 0.75f, 1.0f};
-	const float Color3[4] = {0.0f, 0.6f, 1.0f, 1.0f};
-	const float Color4[4] = {0.75f, 0.85f, 0.9f, 1.0f};
+	// Colors (WHITE)
+	/*
+	const float ButtonColor0[4] = {0.0f, 0.6f, 1.0f, 1.0f};
+	const float ButtonColor1[4] = {0.5f, 0.8f, 1.0f, 1.0f};
+	const float BackColor0[4] = {0.8f, 0.8f, 0.8f, 0.6f};
+	const float BackColor1[4] = {0.8f, 0.8f, 0.8f, 0.4f};
 	const float TextColor[4] = {0.2f, 0.2f, 0.2f, 1.0f};
+	*/
+	// Colors (DARK)
+//	/*
+	const float ButtonColor0[4] = {0.0f, 0.6f, 1.0f, 1.0f};
+	const float ButtonColor1[4] = {0.0f, 0.4f, 0.7f, 1.0f};
+	const float BackColor0[4] = {0.3f, 0.3f, 0.3f, 0.6f};
+	const float BackColor1[4] = {0.3f, 0.3f, 0.3f, 0.4f};
+	const float TextColor[4] = {0.9f, 0.9f, 0.9f, 1.0f};
+//	*/
 	// Sizes
 	const int TrackBarWidth = 10;
-	const int DefaultHScrollWidth = 16;
+	const int DefaultHScrollWidth = 18;
 	const int DefaultVScrollWidth = 18;
-	const int ScrollButtonSize = 17;
+	const int ScrollButtonSize = 18;
 	const int MinScrollLength = 20;
 	const double DefaultUnitFraction = 0.1;
-
-	// Add a line to vertex array
-	inline void drawLine(VertexArray& va, int x0, int y0, int x1, int y1) {
-		if (x1 >= x0) ++x1; else ++x0;
-		if (y1 >= y0) ++y1; else ++y0;
+	const int LineWidth = 2;
+	
+	// Add a quad to vertex array
+	inline void drawQuad(VertexArray& va, float x0, float y0, float x1, float y1) {
 		va.addVertex({ float(x0), float(y0) });
 		va.addVertex({ float(x0), float(y1) });
 		va.addVertex({ float(x1), float(y0) });
@@ -38,6 +46,14 @@ namespace GUI {
 		Vec3f pos((ul.x + lr.x - len * width) / 2.0f, (ul.y + lr.y - height) / 2.0f, 0.0f);
 		Renderer::enableTexture2D();
 		TextRenderer::drawAscii(pos, s, height, false, TextColor);
+		Renderer::disableTexture2D();
+	}
+	
+	inline void drawColorTextCentered(const Point2D& ul, const Point2D& lr, const std::string& s, const Vec3f& col) {
+		int len = s.size(), width = 6, height = 10;
+		Vec3f pos((ul.x + lr.x - len * width) / 2.0f, (ul.y + lr.y - height) / 2.0f, 0.0f);
+		Renderer::enableTexture2D();
+		TextRenderer::drawAscii(pos, s, height, false, col);
 		Renderer::disableTexture2D();
 	}
 
@@ -90,12 +106,7 @@ namespace GUI {
 		if (active) {
 			VertexArray va(120, VertexFormat(0, 4, 0, 3));
 			va.setColor({ 0.0f, 0.0f, 0.0f, 0.0f });
-			va.addVertex({ ul.x, ul.y });
-			va.addVertex({ ul.x, lr.y });
-			va.addVertex({ lr.x, ul.y });
-			va.addVertex({ ul.x, lr.y });
-			va.addVertex({ lr.x, lr.y });
-			va.addVertex({ lr.x, ul.y });
+			drawQuad(va, ul.x, ul.y, lr.x, lr.y);
 			VertexBuffer vb(va);
 			glStencilFunc(GL_EQUAL, channel, 0xFF); // (This should have been done)
 			glStencilOp(GL_KEEP, GL_KEEP, GL_INCR_WRAP);
@@ -128,31 +139,28 @@ namespace GUI {
 
 	void Button::render(const Point2D& ul, const Point2D& lr, const Form& form) const {
 		VertexArray va(120, VertexFormat(0, 4, 0, 3));
-		// Background quad
-		va.setColor(4, mPressed? Color2 : (mHover? Color4 : Color1));
-		va.addVertex({ ul.x, ul.y });
-		va.addVertex({ ul.x, lr.y });
-		va.addVertex({ lr.x, ul.y });
-		va.addVertex({ ul.x, lr.y });
-		va.addVertex({ lr.x, lr.y });
-		va.addVertex({ lr.x, ul.y });
 		// Border
-		va.setColor(4, focused(form)? Color3 : Color2);
-		drawLine(va, ul.x, ul.y, lr.x, ul.y);
-		drawLine(va, ul.x, lr.y, lr.x, lr.y);
-		drawLine(va, ul.x, ul.y, ul.x, lr.y);
-		drawLine(va, lr.x, ul.y, lr.x, lr.y);
+		va.setColor(4, mHover? ButtonColor1 : ButtonColor0);
+		drawQuad(va, ul.x, ul.y, lr.x, lr.y);
+		// Background quad
+		va.setColor(4, mPressed? ButtonColor1 : ButtonColor0);
+		drawQuad(va, ul.x + LineWidth, ul.y + LineWidth, lr.x - LineWidth, lr.y - LineWidth);
 		VertexBuffer(va).render();
 		// Text
-		drawTextCentered(ul, lr, text);
+		drawColorTextCentered(ul, lr, text, Vec3f(1.0f, 1.0f, 1.0f));
 	}
 
 	void TrackBar::update(const Point2D& ul, const Point2D& lr, Form& form) {
-		mHover = mModified = false;
+		mHover = mButtonHover = mModified = false;
 		// Begin selection
 		if (focusable && form.mousePosition() >= ul && form.mousePosition() <= lr) {
 			mHover = true;
 			if (form.mouseLeftDown()) getFocus(form), mSelecting = true;
+			/*
+			int hw = TrackBarWidth / 2, xmin = ul.x + hw, xmax = lr.x - hw;
+			int xsel = (value - lower) / (upper - lower) * (xmax - xmin) + xmin;
+			if (form.mousePosition().x >= xsel - hw && form.mousePosition().x <= xsel + hw) mButtonHover = true;
+			*/
 		}
 		// Update selection
 		if (form.mouseLeftPressed() && mSelecting) {
@@ -169,19 +177,13 @@ namespace GUI {
 		int xsel = (value - lower) / (upper - lower) * (xmax - xmin) + xmin;
 		VertexArray va(120, VertexFormat(0, 4, 0, 3));
 		// Background quad
-		va.setColor(4, mSelecting? Color2 : (mHover? Color4 : Color1));
-		va.addVertex({ float(xsel - hw), ul.y });
-		va.addVertex({ float(xsel - hw), lr.y });
-		va.addVertex({ float(xsel + hw), ul.y });
-		va.addVertex({ float(xsel - hw), lr.y });
-		va.addVertex({ float(xsel + hw), lr.y });
-		va.addVertex({ float(xsel + hw), ul.y });
-		// Border
-		va.setColor(4, focused(form)? Color3 : Color2);
-		drawLine(va, ul.x, ul.y, lr.x, ul.y);
-		drawLine(va, ul.x, lr.y, lr.x, lr.y);
-		drawLine(va, ul.x, ul.y, ul.x, lr.y);
-		drawLine(va, lr.x, ul.y, lr.x, lr.y);
+		va.setColor(4, mSelecting? BackColor1 : (mHover? BackColor0 : BackColor1));
+		drawQuad(va, ul.x, ul.y + LineWidth, lr.x, lr.y - LineWidth);
+		// Foreground Quad
+		va.setColor(4, (mButtonHover || mSelecting)? ButtonColor1 : ButtonColor0);
+		drawQuad(va, float(xsel - hw), ul.y, float(xsel + hw), lr.y);
+		va.setColor(4, mSelecting? ButtonColor1 : ButtonColor0);
+		drawQuad(va, float(xsel - hw) + LineWidth, ul.y + LineWidth, float(xsel + hw) - LineWidth, lr.y - LineWidth);
 		VertexBuffer(va).render();
 		// Text
 		drawTextCentered(ul, lr, text);
@@ -198,38 +200,25 @@ namespace GUI {
 	}
 
 	void PictureBox::render(const Point2D& ul, const Point2D& lr, const Form& form) const {
-		VertexArray va(120, VertexFormat(0, 4, 0, 3)), tva(120, VertexFormat(2, 3, 0, 3));
+		VertexArray va(120, VertexFormat(0, 4, 0, 3)), tva(120, VertexFormat(2, 4, 0, 3));
 		// Background quad
-		va.setColor(4, mPressed? Color2 : (mHover? Color4 : Color1));
-		va.addVertex({ ul.x, ul.y });
-		va.addVertex({ ul.x, lr.y });
-		va.addVertex({ lr.x, ul.y });
-		va.addVertex({ ul.x, lr.y });
-		va.addVertex({ lr.x, lr.y });
-		va.addVertex({ lr.x, ul.y });
+		va.setColor(4, mPressed? BackColor1 : (mHover? BackColor0 : BackColor1));
+		drawQuad(va, ul.x, ul.y, lr.x, lr.y);
 		VertexBuffer(va).render();
 		// Picture
 		if (picture != nullptr) {
-			tva.setColor({ 1.0f, 1.0f, 1.0f });
-			tva.setTexture({ 0.0f, 0.0f }); tva.addVertex({ ul.x, ul.y });
-			tva.setTexture({ 0.0f, 1.0f }); tva.addVertex({ ul.x, lr.y });
-			tva.setTexture({ 1.0f, 0.0f }); tva.addVertex({ lr.x, ul.y });
-			tva.setTexture({ 0.0f, 1.0f }); tva.addVertex({ ul.x, lr.y });
-			tva.setTexture({ 1.0f, 1.0f }); tva.addVertex({ lr.x, lr.y });
-			tva.setTexture({ 1.0f, 0.0f }); tva.addVertex({ lr.x, ul.y });
+			tva.setColor({ 1.0f, 1.0f, 1.0f, 1.0f });
+			tva.setTexture({ 0.0f, 0.0f }); tva.addVertex({ ul.x + borderWidth, ul.y + borderWidth });
+			tva.setTexture({ 0.0f, 1.0f }); tva.addVertex({ ul.x + borderWidth, lr.y - borderWidth });
+			tva.setTexture({ 1.0f, 0.0f }); tva.addVertex({ lr.x - borderWidth, ul.y + borderWidth });
+			tva.setTexture({ 0.0f, 1.0f }); tva.addVertex({ ul.x + borderWidth, lr.y - borderWidth });
+			tva.setTexture({ 1.0f, 1.0f }); tva.addVertex({ lr.x - borderWidth, lr.y - borderWidth });
+			tva.setTexture({ 1.0f, 0.0f }); tva.addVertex({ lr.x - borderWidth, ul.y + borderWidth });
 			Renderer::enableTexture2D();
 			picture->bind();
 			VertexBuffer(tva).render();
 			Renderer::disableTexture2D();
 		}
-		// Border
-		va.clear();
-		va.setColor(4, focused(form)? Color3 : Color2);
-		drawLine(va, ul.x, ul.y, lr.x, ul.y);
-		drawLine(va, ul.x, lr.y, lr.x, lr.y);
-		drawLine(va, ul.x, ul.y, ul.x, lr.y);
-		drawLine(va, lr.x, ul.y, lr.x, lr.y);
-		VertexBuffer(va).render();
 	}
 	
 	void HScroll::update(const Point2D& ul, const Point2D& lr, Form& form) {
@@ -290,31 +279,21 @@ namespace GUI {
 		// Render
 		VertexArray va(120, VertexFormat(0, 4, 0, 3));
 		// Background quad
-		va.setColor(4, Color0);
-		va.addVertex({ ul.x, ul.y });
-		va.addVertex({ ul.x, lr.y });
-		va.addVertex({ lr.x, ul.y });
-		va.addVertex({ ul.x, lr.y });
-		va.addVertex({ lr.x, lr.y });
-		va.addVertex({ lr.x, ul.y });
+		va.setColor(4, BackColor1);
+		drawQuad(va, ul.x, ul.y, lr.x, lr.y);
+		// Border
+		va.setColor(4, (mHover || mSelecting)? ButtonColor1 : ButtonColor0);
+		drawQuad(va, float(left), ul.y, float(left + len), lr.y);
 		// Foreground quad
-		va.setColor(4, mSelecting? Color2 : (mHover? Color4 : Color2));
-		va.addVertex({ float(left), ul.y });
-		va.addVertex({ float(left), lr.y });
-		va.addVertex({ float(left + len), ul.y });
-		va.addVertex({ float(left), lr.y });
-		va.addVertex({ float(left + len), lr.y });
-		va.addVertex({ float(left + len), ul.y });
+		va.setColor(4, mSelecting? ButtonColor1 : ButtonColor0);
+		drawQuad(va, float(left) + LineWidth, ul.y + LineWidth, float(left + len) - LineWidth, lr.y - LineWidth);
 		// Left Button
-		va.setColor(4, mLeftPressed? Color2 : (mLeftHover? Color4 : Color1));
-		va.addVertex({ ulleft.x, ulleft.y });
-		va.addVertex({ ulleft.x, lrleft.y });
-		va.addVertex({ lrleft.x, ulleft.y });
-		va.addVertex({ ulleft.x, lrleft.y });
-		va.addVertex({ lrleft.x, lrleft.y });
-		va.addVertex({ lrleft.x, ulleft.y });
+		if (mLeftHover) {
+			va.setColor(4, BackColor1);
+			drawQuad(va, ulleft.x, ulleft.y, lrleft.x, lrleft.y);
+		}
 		Point2D center = ((ulleft + lrleft) / 2.0f).round() + Point2D(0.0f, 0.0f);
-		va.setColor(4, TextColor);
+		va.setColor(4, mLeftPressed? ButtonColor1 : ButtonColor0);
 		va.addVertex({ center.x - 3, center.y + 1 });
 		va.addVertex({ center.x, center.y + 1 });
 		va.addVertex({ center.x + 4, center.y + 1 - 4 });
@@ -328,15 +307,12 @@ namespace GUI {
 		va.addVertex({ center.x - 3, center.y });
 		va.addVertex({ center.x - 3 + 4, center.y + 4 });
 		// Right Button
-		va.setColor(4, mRightPressed? Color2 : (mRightHover? Color4 : Color1));
-		va.addVertex({ ulright.x, ulright.y });
-		va.addVertex({ ulright.x, lrright.y });
-		va.addVertex({ lrright.x, ulright.y });
-		va.addVertex({ ulright.x, lrright.y });
-		va.addVertex({ lrright.x, lrright.y });
-		va.addVertex({ lrright.x, ulright.y });
+		if (mRightHover) {
+			va.setColor(4, BackColor1);
+			drawQuad(va, ulright.x, ulright.y, lrright.x, lrright.y);
+		}
 		center = ((ulright + lrright) / 2.0f).round() + Point2D(1.0f, 0.0f);
-		va.setColor(4, TextColor);
+		va.setColor(4, mRightPressed? ButtonColor1 : ButtonColor0);
 		va.addVertex({ center.x, center.y + 1 });
 		va.addVertex({ center.x + 3, center.y + 1 });
 		va.addVertex({ center.x - 4, center.y + 1 - 4 });
@@ -349,12 +325,6 @@ namespace GUI {
 		va.addVertex({ center.x + 3, center.y });
 		va.addVertex({ center.x - 4, center.y + 4 });
 		va.addVertex({ center.x + 3 - 4, center.y + 4 });
-		// Border
-		va.setColor(4, focused(form)? Color3 : Color2);
-		drawLine(va, ul.x, ul.y, lr.x, ul.y);
-		drawLine(va, ul.x, lr.y, lr.x, lr.y);
-		drawLine(va, ul.x, ul.y, ul.x, lr.y);
-		drawLine(va, lr.x, ul.y, lr.x, lr.y);
 		VertexBuffer(va).render();
 	}
 	
@@ -416,31 +386,21 @@ namespace GUI {
 		// Render
 		VertexArray va(120, VertexFormat(0, 4, 0, 3));
 		// Background quad
-		va.setColor(4, Color0);
-		va.addVertex({ ul.x, ul.y });
-		va.addVertex({ ul.x, lr.y });
-		va.addVertex({ lr.x, ul.y });
-		va.addVertex({ ul.x, lr.y });
-		va.addVertex({ lr.x, lr.y });
-		va.addVertex({ lr.x, ul.y });
+		va.setColor(4, BackColor1);
+		drawQuad(va, ul.x, ul.y, lr.x, lr.y);
+		// Border
+		va.setColor(4, (mHover || mSelecting)? ButtonColor1 : ButtonColor0);
+		drawQuad(va, ul.x, float(up), lr.x, float(up + len));
 		// Foreground quad
-		va.setColor(4, mSelecting? Color2 : (mHover? Color4 : Color2));
-		va.addVertex({ ul.x, float(up) });
-		va.addVertex({ ul.x, float(up + len) });
-		va.addVertex({ lr.x, float(up) });
-		va.addVertex({ lr.x, float(up) });
-		va.addVertex({ ul.x, float(up + len) });
-		va.addVertex({ lr.x, float(up + len) });
+		va.setColor(4, mSelecting? ButtonColor1 : ButtonColor0);
+		drawQuad(va, ul.x + LineWidth, float(up) + LineWidth, lr.x - LineWidth, float(up + len) - LineWidth);
 		// Up Button
-		va.setColor(4, mUpPressed? Color2 : (mUpHover? Color4 : Color1));
-		va.addVertex({ ulup.x, ulup.y });
-		va.addVertex({ ulup.x, lrup.y });
-		va.addVertex({ lrup.x, ulup.y });
-		va.addVertex({ ulup.x, lrup.y });
-		va.addVertex({ lrup.x, lrup.y });
-		va.addVertex({ lrup.x, ulup.y });
+		if (mUpHover) {
+			va.setColor(4, BackColor1);
+			drawQuad(va, ulup.x, ulup.y, lrup.x, lrup.y);
+		}
 		Point2D center = ((ulup + lrup) / 2.0f).round() + Point2D(0.5f, -0.5f);
-		va.setColor(4, TextColor);
+		va.setColor(4, mUpPressed? ButtonColor1 : ButtonColor0);
 		va.addVertex({ center.x + 1, center.y });
 		va.addVertex({ center.x + 1, center.y - 3 });
 		va.addVertex({ center.x + 1 - 4, center.y + 4 });
@@ -454,15 +414,12 @@ namespace GUI {
 		va.addVertex({ center.x + 4, center.y + 4 });
 		va.addVertex({ center.x + 4, center.y - 3 + 4 });
 		// Down Button
-		va.setColor(4, mDownPressed? Color2 : (mDownHover? Color4 : Color1));
-		va.addVertex({ uldown.x, uldown.y });
-		va.addVertex({ uldown.x, lrdown.y });
-		va.addVertex({ lrdown.x, uldown.y });
-		va.addVertex({ uldown.x, lrdown.y });
-		va.addVertex({ lrdown.x, lrdown.y });
-		va.addVertex({ lrdown.x, uldown.y });
+		if (mDownHover) {
+			va.setColor(4, BackColor1);
+			drawQuad(va, uldown.x, uldown.y, lrdown.x, lrdown.y);
+		}
 		center = ((uldown + lrdown) / 2.0f).round() + Point2D(0.5f, 0.5f);
-		va.setColor(4, TextColor);
+		va.setColor(4, mDownPressed? ButtonColor1 : ButtonColor0);
 		va.addVertex({ center.x + 1, center.y + 3 });
 		va.addVertex({ center.x + 1, center.y });
 		va.addVertex({ center.x + 1 - 4, center.y - 4 });
@@ -475,33 +432,41 @@ namespace GUI {
 		va.addVertex({ center.x + 4, center.y - 4 });
 		va.addVertex({ center.x, center.y + 3 });
 		va.addVertex({ center.x + 4, center.y + 3 - 4 });
-		// Border
-		va.setColor(4, focused(form)? Color3 : Color2);
-		drawLine(va, ul.x, ul.y, lr.x, ul.y);
-		drawLine(va, ul.x, lr.y, lr.x, lr.y);
-		drawLine(va, ul.x, ul.y, ul.x, lr.y);
-		drawLine(va, lr.x, ul.y, lr.x, lr.y);
 		VertexBuffer(va).render();
 	}
 	
 	ScrollArea::ScrollArea(const Position& ul, const Position& lr, const Point2D& size_, const Point2D& position_, bool draggable_, bool scalable_, bool focusable):
 			Control(ul, lr, focusable), size(size_), position(position_), draggable(draggable_), scalable(scalable_),
 			mContent(Position(Point2D(0.5f, 0.5f), Point2D(0, 0)), Position(Point2D(0.5f, 0.5f), Point2D(0, 0))),
-			mView(Position(Point2D(0.0f, 0.0f), Point2D(0, 0)), Position(Point2D(1.0f, 1.0f), Point2D(-DefaultVScrollWidth, -DefaultHScrollWidth))),
-			mH(Position(Point2D(0.0f, 1.0f), Point2D(0, -DefaultHScrollWidth)), Position(Point2D(1.0f, 1.0f), Point2D(-DefaultVScrollWidth - 1, 0)), 1.0),
-			mV(Position(Point2D(1.0f, 0.0f), Point2D(-DefaultVScrollWidth, 0)), Position(Point2D(1.0f, 1.0f), Point2D(0, -DefaultHScrollWidth - 1)), 1.0) {
+			mView(Position(Point2D(0.0f, 0.0f), Point2D(0, 0)), Position(Point2D(1.0f, 1.0f), Point2D(0, 0))),
+			mH(Position(Point2D(0.0f, 1.0f), Point2D(0, -DefaultHScrollWidth)), Position(Point2D(1.0f, 1.0f), Point2D(0, 0)), 1.0),
+			mV(Position(Point2D(1.0f, 0.0f), Point2D(-DefaultVScrollWidth, 0)), Position(Point2D(1.0f, 1.0f), Point2D(0, 0)), 1.0) {
 		mView.addChild({&mContent});
 		Control::addChild({&mView, &mH, &mV});
 	}
 	
 	void ScrollArea::update(const Point2D& ul, const Point2D& lr, Form&) {
+		mH.active = mV.active = false;
+		mView.lowerRight.offset = Point2D(0, 0); // Default: no scroll bars
+		Point2D vsize = mView.lowerRight.compute(lr - ul) - mView.upperLeft.compute(lr - ul); // Viewport size
+		if (size.x * scale > vsize.x) mH.active = true, mView.lowerRight.offset.y -= DefaultHScrollWidth, vsize.y -= DefaultHScrollWidth; // Enable HScroll
+		if (size.y * scale > vsize.y) mV.active = true, mView.lowerRight.offset.x -= DefaultVScrollWidth, vsize.x -= DefaultVScrollWidth; // Enable VScroll
+		if (size.x * scale > vsize.x && !mH.active) mH.active = true, mView.lowerRight.offset.y -= DefaultHScrollWidth, vsize.y -= DefaultHScrollWidth; // Enable HScroll
+		if (mH.active && mV.active) { // Both enabled
+			mH.lowerRight.offset.x = -DefaultVScrollWidth - 1;
+			mV.lowerRight.offset.y = -DefaultHScrollWidth - 1;
+		} else {
+			mH.lowerRight.offset.x = 0;
+			mV.lowerRight.offset.y = 0;
+		}
+		// Calculate content area offset
 		position.x = mH.position, position.y = mV.position;
-		Point2D vsize = mView.lowerRight.compute(lr - ul) - mView.upperLeft.compute(lr - ul);
 		Point2D offset = size * scale - vsize;
 		offset.x = std::max(0.0f, offset.x), offset.y = std::max(0.0f, offset.y);
 		offset = offset * (position - Point2D(0.5f, 0.5f));
-		mContent.upperLeft.offset = offset * -1.0f - size * scale / 2.0f;
-		mContent.lowerRight.offset = offset * -1.0f + size * scale / 2.0f;
+		mContent.upperLeft.offset = offset * -1.0f - size * scale / 2.0f + mView.lowerRight.offset / 2.0f;
+		mContent.lowerRight.offset = offset * -1.0f + size * scale / 2.0f + mView.lowerRight.offset / 2.0f;
+		mView.lowerRight.offset = Point2D(0, 0);
 		// TODO: implement dragging & scaling
 		Point2D fraction = vsize / size;
 		fraction.x = std::min(1.0f, fraction.x), fraction.y = std::min(1.0f, fraction.y);

@@ -167,7 +167,7 @@ namespace GUI {
 		bool modified() const { return mModified; }
 
 	private:
-		bool mHover = false, mSelecting = false, mModified = false;
+		bool mHover = false, mButtonHover = false, mSelecting = false, mModified = false;
 
 		void update(const Point2D& ul, const Point2D& lr, Form& form) override;
 		void render(const Point2D& ul, const Point2D& lr, const Form& form) const override;
@@ -178,6 +178,7 @@ namespace GUI {
 		PictureBox(const Position& ul, const Position& lr, const Texture* picture_, bool focusable = true):
 			Control(ul, lr, focusable), picture(picture_) {}
 		const Texture* picture;
+		float borderWidth = 5.0;
 
 		bool mouseHover() const { return mHover; }
 		bool pressed() const { return mPressed; }
