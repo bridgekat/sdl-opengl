@@ -4,32 +4,30 @@
 #include <sstream>
 #include <algorithm>
 #include <cmath>
+#include <SDL2/SDL_image.h>
 #include "common.h"
 #include "debug.h"
-
 #include "bitmap.h"
 
 void TextureImage::loadFromBMP(const std::string& filename, bool checkSize, bool masked) {
 	Bitmap bmp;
 	bmp.load(filename);
 
+	if (checkSize && (bmp.w != bmp.h || (1 << int(log2(bmp.w))) != bmp.w)) {
+		LogWarning("Failed to load file \"" + filename + "\" as bitmap texture: unsupported image size (must be a square with side length 2 ^ n pixels)");
+		return;
+	}
+
 	mWidth = bmp.w;
 	mHeight = bmp.h;
 	mBytesPerPixel = masked ? 4 : 3;
 	mPitch = alignedPitch(mWidth * mBytesPerPixel);
 
-	if (checkSize && (mWidth != mHeight || (1 << int(log2(mWidth))) != mWidth)) {
-		LogWarning("Failed to load file \"" + filename + "\" as bitmap texture: unsupported image size (must be a square with side length 2 ^ n pixels)");
-		return;
-	}
-
 	if (masked) {
 		mData = new unsigned char[mHeight * mPitch];
+		memset(mData, 255, sizeof(unsigned char) * mHeight * mPitch);
 		for (int i = 0; i < mHeight; i++) for (int j = 0; j < mWidth; j++) {
-			mData[i * mPitch + j * mBytesPerPixel + 0] = 255;
-			mData[i * mPitch + j * mBytesPerPixel + 1] = 255;
-			mData[i * mPitch + j * mBytesPerPixel + 2] = 255;
-			mData[i * mPitch + j * mBytesPerPixel + 3] = 255 - reinterpret_cast<unsigned char*>(bmp.data)[i * bmp.pitch + j * 3];
+			mData[i * mPitch + j * mBytesPerPixel + 3] = reinterpret_cast<unsigned char*>(bmp.data)[i * bmp.pitch + j * 3];
 		}
 	} else {
 		mData = new unsigned char[mHeight * mPitch];
@@ -37,6 +35,58 @@ void TextureImage::loadFromBMP(const std::string& filename, bool checkSize, bool
 			memcpy(mData + i * mPitch, reinterpret_cast<unsigned char*>(bmp.data) + i * bmp.pitch, mWidth * mBytesPerPixel);
 		}
 	}
+}
+
+void TextureImage::loadFromPNG(const std::string& filename, bool checkSize, bool masked) {
+	SDL_Surface* surface = IMG_LoadPNG_RW(SDL_RWFromFile(filename.c_str(), "rb"));
+	if (surface == nullptr) {
+		LogWarning("Failed to load file \"" + filename + "\" as PNG image: " + IMG_GetError());
+		return;
+	}
+
+	if (checkSize && surface->w != surface->h || (1 << int(log2(surface->w))) != surface->w) {
+		LogWarning("Failed to load file \"" + filename + "\" as PNG texture: unsupported image size (must be a square with side length 2 ^ n pixels)");
+		return;
+	}
+
+	if (surface->format->BytesPerPixel == 1) {
+		// Grayscale / alpha
+		mWidth = surface->w;
+		mHeight = surface->h;
+		mBytesPerPixel = 4;
+		mPitch = alignedPitch(mWidth * mBytesPerPixel);
+		mData = new unsigned char[mHeight * mPitch];
+		memset(mData, 255, sizeof(unsigned char) * mHeight * mPitch);
+		for (int i = 0; i < mHeight; i++) for (int j = 0; j < mWidth; j++) {
+			unsigned char col = reinterpret_cast<unsigned char*>(surface->pixels)[i * surface->pitch + j];
+			if (masked) { // Alpha
+				mData[i * mPitch + j * mBytesPerPixel + 3] = col;
+			} else { // Grayscale
+				mData[i * mPitch + j * mBytesPerPixel + 0] = col;
+				mData[i * mPitch + j * mBytesPerPixel + 1] = col;
+				mData[i * mPitch + j * mBytesPerPixel + 2] = col;
+			}
+		}
+	} else if (surface->format->BytesPerPixel == 3 || surface->format->BytesPerPixel == 4) {
+		// RGB / RGBA
+		if (masked) {
+			LogWarning("Failed to load file \"" + filename + "\" as mask PNG image: unsupported format (only grayscale PNG-8 is supported)");
+			return;
+		}
+		mWidth = surface->w;
+		mHeight = surface->h;
+		mBytesPerPixel = surface->format->BytesPerPixel;
+		mPitch = alignedPitch(mWidth * mBytesPerPixel);
+		mData = new unsigned char[mHeight * mPitch];
+		for (int i = 0; i < mHeight; i++) {
+			memcpy(mData + i * mPitch, reinterpret_cast<unsigned char*>(surface->pixels) + i * surface->pitch, mWidth * mBytesPerPixel);
+		}
+	} else {
+		LogWarning("Failed to load file \"" + filename + "\" as PNG image: unsupported format (only PNG-8/24/32 is supported)");
+		return;
+	}
+
+	SDL_FreeSurface(surface);
 }
 
 void TextureImage::copyFrom(const TextureImage& src, int x, int y, int srcx, int srcy) {
@@ -123,25 +173,25 @@ void Build2DMipmaps(const TextureImage& image, TextureFormat format, int level) 
 	glTexEnvf(GL_TEXTURE_FILTER_CONTROL, GL_TEXTURE_LOD_BIAS, 0.0f);
 	Assert(image.bytesPerPixel() == 3 || image.bytesPerPixel() == 4);
 	TextureFormat srcFormat = image.bytesPerPixel() == 4 ? TextureFormatRGBA : TextureFormatRGB;
-	int scale = 1;
+	TextureImage curr;
+	curr = image;
 	for (int i = 0; i <= level; i++) {
-		TextureImage curr = image.shrink(scale);
 		glTexImage2D(GL_TEXTURE_2D, i, format, curr.width(), curr.height(), 0, srcFormat, GL_UNSIGNED_BYTE, curr.data());
-		scale *= 2;
+		curr = curr.shrink(2);
 	}
 }
 
-void Texture::load(const TextureImage& image, bool alpha, int maxLevels) {
+void Texture::load(const TextureImage& image, bool alpha, bool bilinear, int maxLevels) {
 	if (image.data() == nullptr) {
 		LogWarning("Skipping empty texture image");
 		return;
 	}
 	Assert(image.bytesPerPixel() == 3 || image.bytesPerPixel() == 4);
-	if (maxLevels < 0) maxLevels = (int)log2(image.width());
+	if (maxLevels < 0) maxLevels = int(log2(image.width()));
 	TextureFormat format = alpha ? TextureFormatRGBA : TextureFormatRGB;
 	glGenTextures(1, &mID);
 	glBindTexture(GL_TEXTURE_2D, mID);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST_MIPMAP_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, bilinear ? GL_LINEAR : GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, bilinear ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_LINEAR);
 	Build2DMipmaps(image, format, maxLevels);
 }

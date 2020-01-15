@@ -11,7 +11,7 @@ ResourceIncludes=
 MakeIncludes=
 Compiler=
 CppCompiler=-std=c++14_@@_-DSDL_MAIN_HANDLED_@@_
-Linker=-lopengl32_@@_-lglew32.dll_@@_-lSDL2.dll_@@_
+Linker=-lopengl32_@@_-lglew32.dll_@@_-lSDL2.dll_@@_-lSDL2_image.dll_@@_
 IsCpp=1
 Icon=
 ExeOutput=../../release

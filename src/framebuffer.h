@@ -6,7 +6,7 @@
 
 class FrameBuffer {
 public:
-	FrameBuffer(): mCreated(false) {}
+	FrameBuffer() = default;
 	FrameBuffer(int width, int height, int col, bool depth) { create(width, height, col, depth); }
 	~FrameBuffer() { destroy(); }
 	
@@ -45,10 +45,10 @@ public:
 	}
 
 private:
-	int mSize, mColorAttachCount;
-	bool mCreated, mDepthAttach;
+	int mSize = 0, mColorAttachCount = 0;
+	bool mCreated = false, mDepthAttach = false;
 	
-	GLuint mID, mColorTextures[16], mDepthTexture;
+	GLuint mID = 0, mColorTextures[16]{}, mDepthTexture = 0;
 };
 
 #endif // !FRAMEBUFFER_H_

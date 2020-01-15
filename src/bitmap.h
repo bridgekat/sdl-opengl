@@ -38,7 +38,6 @@ public:
 		data[pos] = col.x, data[pos + 1] = col.y, data[pos + 2] = col.z;
 	}
 	
-	void swapRBChannels();
 	void load(const std::string& filename);
 	void save(const std::string& filename);
 	
@@ -46,6 +45,9 @@ private:
 	int align(int x, int a) {
 		return x % a == 0 ? x : x + a - x % a;
 	}
+
+	void upsideDown();
+	void swapRBChannels();
 };
 
 #endif

@@ -118,13 +118,13 @@ private:
 class VertexBuffer {
 public:
 	VertexBuffer(): id(0), vao(0), vertexes(0) {}
-	VertexBuffer(VertexBuffer&& r): id(0), vao(0), vertexes(0) { swap(r); }
+	VertexBuffer(VertexBuffer&& r) noexcept: id(0), vao(0), vertexes(0) { swap(r); }
 	/*VertexBuffer(VertexBufferID id_, int vertexes_, const VertexFormat& format_):
 		id(id_), vertexes(vertexes_), format(format_) {}*/
 	explicit VertexBuffer(const VertexArray& va, bool staticDraw = false);
 	~VertexBuffer() { destroy(); }
 
-	VertexBuffer& operator=(VertexBuffer&& r) {
+	VertexBuffer& operator=(VertexBuffer&& r) noexcept {
 		swap(r);
 		return *this;
 	}

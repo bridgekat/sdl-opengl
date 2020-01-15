@@ -62,6 +62,10 @@ public:
 	static void disableDepthTest() { glDisable(GL_DEPTH_TEST); }
 	static void enableCullFace() { glEnable(GL_CULL_FACE); }
 	static void disableCullFace() { glDisable(GL_CULL_FACE); }
+	static void setAlphaTestThreshold(float threshold) {
+		if (!OpenGL::coreProfile()) glAlphaFunc(GL_GREATER, threshold);
+		else mFinal.setUniform1f("AlphaTestThreshold", threshold);
+	}
 	static void enableAlphaTest() {
 		if (!OpenGL::coreProfile()) glEnable(GL_ALPHA_TEST);
 		else shader().setUniform1i("AlphaTestEnabled", 1);

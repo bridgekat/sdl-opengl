@@ -3,33 +3,67 @@
 #include "renderer.h"
 #include "logger.h"
 #include "textrenderer.h"
+#include "config.h"
 
 namespace GUI {
-	// Colors (WHITE)
-	/*
+	// Background transparency is not supported with subpixel font antialiasing enabled!
+	
+	// Colors (SOLID WHITE)
+	const float BackgroundColor[3] = {1.0f, 1.0f, 1.0f};
+	const float TextColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
 	const float ButtonColor0[4] = {0.0f, 0.6f, 1.0f, 1.0f};
 	const float ButtonColor1[4] = {0.5f, 0.8f, 1.0f, 1.0f};
+	const float ButtonTextColor[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+	const float BackColor0[4] = {0.8f, 0.8f, 0.8f, 1.0f};
+	const float BackColor1[4] = {0.9f, 0.9f, 0.9f, 1.0f};
+	// Colors (WHITE)
+/*
+	const float BackgroundColor[3] = {1.0f, 1.0f, 1.0f};
+	const float TextColor[4] = {0.2f, 0.2f, 0.2f, 1.0f};
+	const float ButtonColor0[4] = {0.0f, 0.6f, 1.0f, 1.0f};
+	const float ButtonColor1[4] = {0.5f, 0.8f, 1.0f, 1.0f};
+	const float ButtonTextColor[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 	const float BackColor0[4] = {0.8f, 0.8f, 0.8f, 0.6f};
 	const float BackColor1[4] = {0.8f, 0.8f, 0.8f, 0.4f};
-	const float TextColor[4] = {0.2f, 0.2f, 0.2f, 1.0f};
-	*/
+*/
 	// Colors (DARK)
-//	/*
+/*
+	const float BackgroundColor[3] = {0.15f, 0.15f, 0.15f};
+	const float TextColor[4] = {0.9f, 0.9f, 0.9f, 1.0f};
 	const float ButtonColor0[4] = {0.0f, 0.6f, 1.0f, 1.0f};
 	const float ButtonColor1[4] = {0.0f, 0.4f, 0.7f, 1.0f};
+	const float ButtonTextColor[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 	const float BackColor0[4] = {0.3f, 0.3f, 0.3f, 0.6f};
 	const float BackColor1[4] = {0.3f, 0.3f, 0.3f, 0.4f};
-	const float TextColor[4] = {0.9f, 0.9f, 0.9f, 1.0f};
-//	*/
-	// Sizes
-	const int TrackBarWidth = 10;
+*/
+	// Default sizes (when ScalingFactor = 1)
+	const int TrackBarWidth1 = 10;
+	const int ScrollButtonSize1 = 18;
+	const int MinScrollLength1 = 20;
+	const int LineWidth1 = 2;
+	const int PictureBoxBorderWidth1 = 5;
+	// Scaled sizes
+	int TrackBarWidth = TrackBarWidth1;
+	int ScrollButtonSize = ScrollButtonSize1;
+	int MinScrollLength = MinScrollLength1;
+	int LineWidth = LineWidth1;
+	int PictureBoxBorderWidth = PictureBoxBorderWidth1;
+	// Relative & fixed sizes
+	const double DefaultUnitFraction = 0.1; // Scroll unit length / viewport length
 	const int DefaultHScrollWidth = 18;
 	const int DefaultVScrollWidth = 18;
-	const int ScrollButtonSize = 18;
-	const int MinScrollLength = 20;
-	const double DefaultUnitFraction = 0.1;
-	const int LineWidth = 2;
-	
+	// HiDPI Scaling
+	float ScalingFactor = 1;
+	float getScalingFactor() { return ScalingFactor; }
+	void setScalingFactor(float scaling) {
+		ScalingFactor = scaling;
+		TrackBarWidth = int(TrackBarWidth1 * scaling + 0.5f);
+		ScrollButtonSize = int(ScrollButtonSize1 * scaling + 0.5f);
+		MinScrollLength = int(MinScrollLength1 * scaling + 0.5f);
+		LineWidth = int(LineWidth1 * scaling + 0.5f);
+		PictureBoxBorderWidth = int(PictureBoxBorderWidth1 * scaling + 0.5f);
+	}
+
 	// Add a quad to vertex array
 	inline void drawQuad(VertexArray& va, float x0, float y0, float x1, float y1) {
 		va.addVertex({ float(x0), float(y0) });
@@ -41,19 +75,12 @@ namespace GUI {
 	}
 
 	// Draw string using TextRenderer::drawAscii
-	inline void drawTextCentered(const Point2D& ul, const Point2D& lr, const std::string& s) {
-		int len = s.size(), width = 6, height = 10;
-		Vec3f pos((ul.x + lr.x - len * width) / 2.0f, (ul.y + lr.y - height) / 2.0f, 0.0f);
+	inline void drawTextCentered(const Point2D& ul, const Point2D& lr, const std::string& s, const Vec3f& col, const Vec3f& bgcol) {
+		float size = std::round(float(Config::getDouble("GUI.FontSize", 10.5)) * ScalingFactor);
+		float bheight = TextRenderer::getBoxHeight(size, s), bwidth = TextRenderer::getBoxWidth(size, s);
+		Vec3f pos(std::round((ul.x + lr.x - bwidth) / 2.0f), std::round((ul.y + lr.y + bheight) / 2.0f), 0.0f);
 		Renderer::enableTexture2D();
-		TextRenderer::drawAscii(pos, s, height, false, TextColor);
-		Renderer::disableTexture2D();
-	}
-	
-	inline void drawColorTextCentered(const Point2D& ul, const Point2D& lr, const std::string& s, const Vec3f& col) {
-		int len = s.size(), width = 6, height = 10;
-		Vec3f pos((ul.x + lr.x - len * width) / 2.0f, (ul.y + lr.y - height) / 2.0f, 0.0f);
-		Renderer::enableTexture2D();
-		TextRenderer::drawAscii(pos, s, height, false, col);
+		TextRenderer::drawAscii(pos, s, size, col, bgcol);
 		Renderer::disableTexture2D();
 	}
 
@@ -71,9 +98,9 @@ namespace GUI {
 		mPrevMouse = win.getPrevMouseState();
 		// Tab index & focus
 		mTabIndex.clear();
-		updateTabIndex(mArea);
+		updateTabIndex(area);
 		if (!mTabIndex.empty()) {
-			int n = mTabIndex.size(), ind = std::find(mTabIndex.begin(), mTabIndex.end(), mFocus) - mTabIndex.begin();
+			int n = mTabIndex.size(), ind = int(std::find(mTabIndex.begin(), mTabIndex.end(), mFocus) - mTabIndex.begin());
 			if (win.isKeyActed(SDL_SCANCODE_TAB)) {
 				if (win.isKeyPressed(SDL_SCANCODE_LSHIFT) || win.isKeyPressed(SDL_SCANCODE_RSHIFT)) --ind;
 				else ++ind;
@@ -82,11 +109,11 @@ namespace GUI {
 			mFocus = mTabIndex[ind];
 		} else mFocus = nullptr;
 		// Update all controls
-		mArea->updateAll(pos, size, *this);
+		area->updateAll(pos, size, *this);
 	}
 	
 	void Form::render(const Window&, const Point2D& pos, const Point2D& size) const {
-		mArea->renderAll(pos, size, *this);
+		area->renderAll(pos, size, *this);
 	}
 	
 	void ClipArea::updateAll(const Point2D& parentPos, const Point2D& parentSize, Form& form) {
@@ -108,13 +135,13 @@ namespace GUI {
 			va.setColor({ 0.0f, 0.0f, 0.0f, 0.0f });
 			drawQuad(va, ul.x, ul.y, lr.x, lr.y);
 			VertexBuffer vb(va);
-			glStencilFunc(GL_EQUAL, channel, 0xFF); // (This should have been done)
+//			glStencilFunc(GL_EQUAL, channel, 0xFF); // (This should have been done)
 			glStencilOp(GL_KEEP, GL_KEEP, GL_INCR_WRAP);
 			vb.render(); // Initialize clip area
 			glStencilFunc(GL_EQUAL, channel + 1, 0xFF);
 			glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 			for (const Control* c: realChildren()) c->renderAll(ul, lr - ul, form, channel + 1);
-			glStencilFunc(GL_EQUAL, channel + 1, 0xFF); // (This should have been done)
+//			glStencilFunc(GL_EQUAL, channel + 1, 0xFF); // (This should have been done)
 			glStencilOp(GL_KEEP, GL_KEEP, GL_DECR_WRAP);
 			vb.render(); // Discard clip area
 			glStencilFunc(GL_EQUAL, channel, 0xFF);
@@ -124,7 +151,7 @@ namespace GUI {
 	
 	void Label::render(const Point2D& ul, const Point2D& lr, const Form&) const {
 		// Text
-		drawTextCentered(ul, lr, text);
+		drawTextCentered(ul, lr, text, TextColor, BackgroundColor);
 	}
 
 	void Button::update(const Point2D& ul, const Point2D& lr, Form& form) {
@@ -137,7 +164,7 @@ namespace GUI {
 		}
 	}
 
-	void Button::render(const Point2D& ul, const Point2D& lr, const Form& form) const {
+	void Button::render(const Point2D& ul, const Point2D& lr, const Form&) const {
 		VertexArray va(120, VertexFormat(0, 4, 0, 3));
 		// Border
 		va.setColor(4, mHover? ButtonColor1 : ButtonColor0);
@@ -147,7 +174,7 @@ namespace GUI {
 		drawQuad(va, ul.x + LineWidth, ul.y + LineWidth, lr.x - LineWidth, lr.y - LineWidth);
 		VertexBuffer(va).render();
 		// Text
-		drawColorTextCentered(ul, lr, text, Vec3f(1.0f, 1.0f, 1.0f));
+		drawTextCentered(ul, lr, text, ButtonTextColor, mPressed ? ButtonColor1 : ButtonColor0);
 	}
 
 	void TrackBar::update(const Point2D& ul, const Point2D& lr, Form& form) {
@@ -164,29 +191,31 @@ namespace GUI {
 		}
 		// Update selection
 		if (form.mouseLeftPressed() && mSelecting) {
-			int hw = TrackBarWidth / 2, xmin = ul.x + hw, xmax = lr.x - hw, xsel = form.mousePosition().x;
+			float hw = std::round(TrackBarWidth / 2.0f), xmin = std::round(ul.x + hw), xmax = std::round(lr.x - hw), xsel = form.mousePosition().x;
 			xsel = std::min(std::max(xsel, xmin), xmax);
-			double newValue = (xsel - xmin) / double(xmax - xmin) * (upper - lower) + lower;
+			double newValue = (double(xsel) - xmin) / (double(xmax) - xmin) * (upper - lower) + lower;
 			mModified = (newValue != value);
 			value = newValue;
 		} else mSelecting = false; // Released left button
 	}
 
-	void TrackBar::render(const Point2D& ul, const Point2D& lr, const Form& form) const {
+	void TrackBar::render(const Point2D& ul, const Point2D& lr, const Form&) const {
 		int hw = TrackBarWidth / 2, xmin = ul.x + hw, xmax = lr.x - hw;
 		int xsel = (value - lower) / (upper - lower) * (xmax - xmin) + xmin;
 		VertexArray va(120, VertexFormat(0, 4, 0, 3));
 		// Background quad
-		va.setColor(4, mSelecting? BackColor1 : (mHover? BackColor0 : BackColor1));
+		va.setColor(4, mSelecting ? BackColor1 : (mHover ? BackColor0 : BackColor1));
 		drawQuad(va, ul.x, ul.y + LineWidth, lr.x, lr.y - LineWidth);
-		// Foreground Quad
-		va.setColor(4, (mButtonHover || mSelecting)? ButtonColor1 : ButtonColor0);
-		drawQuad(va, float(xsel - hw), ul.y, float(xsel + hw), lr.y);
-		va.setColor(4, mSelecting? ButtonColor1 : ButtonColor0);
-		drawQuad(va, float(xsel - hw) + LineWidth, ul.y + LineWidth, float(xsel + hw) - LineWidth, lr.y - LineWidth);
 		VertexBuffer(va).render();
 		// Text
-		drawTextCentered(ul, lr, text);
+		drawTextCentered(ul, lr, text, TextColor, mSelecting ? BackColor1 : (mHover ? BackColor0 : BackColor1));
+		// Foreground Quad
+		va.clear();
+		va.setColor(4, (mButtonHover || mSelecting) ? ButtonColor1 : ButtonColor0);
+		drawQuad(va, float(xsel - hw), ul.y, float(xsel + hw), lr.y);
+		va.setColor(4, mSelecting ? ButtonColor1 : ButtonColor0);
+		drawQuad(va, float(xsel - hw) + LineWidth, ul.y + LineWidth, float(xsel + hw) - LineWidth, lr.y - LineWidth);
+		VertexBuffer(va).render();
 	}
 
 	void PictureBox::update(const Point2D& ul, const Point2D& lr, Form& form) {
@@ -199,21 +228,22 @@ namespace GUI {
 		}
 	}
 
-	void PictureBox::render(const Point2D& ul, const Point2D& lr, const Form& form) const {
+	void PictureBox::render(const Point2D& ul, const Point2D& lr, const Form&) const {
 		VertexArray va(120, VertexFormat(0, 4, 0, 3)), tva(120, VertexFormat(2, 4, 0, 3));
 		// Background quad
 		va.setColor(4, mPressed? BackColor1 : (mHover? BackColor0 : BackColor1));
 		drawQuad(va, ul.x, ul.y, lr.x, lr.y);
 		VertexBuffer(va).render();
 		// Picture
+		float bw = borderWidth * PictureBoxBorderWidth;
 		if (picture != nullptr) {
 			tva.setColor({ 1.0f, 1.0f, 1.0f, 1.0f });
-			tva.setTexture({ 0.0f, 0.0f }); tva.addVertex({ ul.x + borderWidth, ul.y + borderWidth });
-			tva.setTexture({ 0.0f, 1.0f }); tva.addVertex({ ul.x + borderWidth, lr.y - borderWidth });
-			tva.setTexture({ 1.0f, 0.0f }); tva.addVertex({ lr.x - borderWidth, ul.y + borderWidth });
-			tva.setTexture({ 0.0f, 1.0f }); tva.addVertex({ ul.x + borderWidth, lr.y - borderWidth });
-			tva.setTexture({ 1.0f, 1.0f }); tva.addVertex({ lr.x - borderWidth, lr.y - borderWidth });
-			tva.setTexture({ 1.0f, 0.0f }); tva.addVertex({ lr.x - borderWidth, ul.y + borderWidth });
+			tva.setTexture({ 0.0f, 0.0f }); tva.addVertex({ ul.x + bw, ul.y + bw });
+			tva.setTexture({ 0.0f, 1.0f }); tva.addVertex({ ul.x + bw, lr.y - bw });
+			tva.setTexture({ 1.0f, 0.0f }); tva.addVertex({ lr.x - bw, ul.y + bw });
+			tva.setTexture({ 0.0f, 1.0f }); tva.addVertex({ ul.x + bw, lr.y - bw });
+			tva.setTexture({ 1.0f, 1.0f }); tva.addVertex({ lr.x - bw, lr.y - bw });
+			tva.setTexture({ 1.0f, 0.0f }); tva.addVertex({ lr.x - bw, ul.y + bw });
 			Renderer::enableTexture2D();
 			picture->bind();
 			VertexBuffer(tva).render();
@@ -268,7 +298,7 @@ namespace GUI {
 		mModified = (position != oldPosition);
 	}
 
-	void HScroll::render(const Point2D& ul, const Point2D& lr, const Form& form) const {
+	void HScroll::render(const Point2D& ul, const Point2D& lr, const Form&) const {
 		// Areas
 		Point2D ulsa = ul + Point2D(ScrollButtonSize, 0), lrsa = lr - Point2D(ScrollButtonSize, 0); // Scroll area
 		float len = std::max((lrsa.x - ulsa.x) * float(length), float(MinScrollLength));
@@ -375,7 +405,7 @@ namespace GUI {
 		mModified = (position != oldPosition);
 	}
 
-	void VScroll::render(const Point2D& ul, const Point2D& lr, const Form& form) const {
+	void VScroll::render(const Point2D& ul, const Point2D& lr, const Form&) const {
 		// Areas
 		Point2D ulsa = ul + Point2D(0, ScrollButtonSize), lrsa = lr - Point2D(0, ScrollButtonSize); // Scroll area
 		float len = std::max((lrsa.y - ulsa.y) * float(length), float(MinScrollLength));
@@ -448,7 +478,7 @@ namespace GUI {
 	void ScrollArea::update(const Point2D& ul, const Point2D& lr, Form&) {
 		mH.active = mV.active = false;
 		mView.lowerRight.offset = Point2D(0, 0); // Default: no scroll bars
-		Point2D vsize = mView.lowerRight.compute(lr - ul) - mView.upperLeft.compute(lr - ul); // Viewport size
+		Point2D vsize = (mView.lowerRight.compute(lr - ul) - mView.upperLeft.compute(lr - ul)) / ScalingFactor; // Viewport size
 		if (size.x * scale > vsize.x) mH.active = true, mView.lowerRight.offset.y -= DefaultHScrollWidth, vsize.y -= DefaultHScrollWidth; // Enable HScroll
 		if (size.y * scale > vsize.y) mV.active = true, mView.lowerRight.offset.x -= DefaultVScrollWidth, vsize.x -= DefaultVScrollWidth; // Enable VScroll
 		if (size.x * scale > vsize.x && !mH.active) mH.active = true, mView.lowerRight.offset.y -= DefaultHScrollWidth, vsize.y -= DefaultHScrollWidth; // Enable HScroll
@@ -468,7 +498,7 @@ namespace GUI {
 		mContent.lowerRight.offset = offset * -1.0f + size * scale / 2.0f + mView.lowerRight.offset / 2.0f;
 		mView.lowerRight.offset = Point2D(0, 0);
 		// TODO: implement dragging & scaling
-		Point2D fraction = vsize / size;
+		Point2D fraction = vsize / (size * scale);
 		fraction.x = std::min(1.0f, fraction.x), fraction.y = std::min(1.0f, fraction.y);
 		mH.length = fraction.x, mV.length = fraction.y;
 	}

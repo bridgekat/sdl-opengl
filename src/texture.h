@@ -15,11 +15,11 @@ public:
 		mData(new unsigned char[mHeight * mPitch]) {
 		memset(mData, 0, mHeight * mPitch * sizeof(unsigned char));
 	}
-	TextureImage(TextureImage&& r):
+	TextureImage(TextureImage&& r) noexcept:
 		mWidth(r.mWidth), mHeight(r.mHeight), mBytesPerPixel(r.mBytesPerPixel), mPitch(r.mPitch) {
 		std::swap(mData, r.mData);
 	}
-	TextureImage(const std::string& filename, bool masked = false) { loadFromBMP(filename, false, masked); }
+	TextureImage(const std::string& filename) { loadFromPNG(filename); }
 	~TextureImage() { if (mData != nullptr) delete[] mData; }
 
 	TextureImage& operator= (const TextureImage& r) {
@@ -29,6 +29,9 @@ public:
 		memcpy(mData, r.mData, mHeight * mPitch * sizeof(unsigned char));
 		return (*this);
 	}
+
+	void loadFromBMP(const std::string& filename, bool checkSize = false, bool masked = false);
+	void loadFromPNG(const std::string& filename, bool checkSize = false, bool masked = false);
 	
 	unsigned char& color(int x, int y, int c) { return mData[y * mPitch + x * mBytesPerPixel + c]; }
 	const unsigned char& color(int x, int y, int c) const { return mData[y * mPitch + x * mBytesPerPixel + c]; }
@@ -55,17 +58,18 @@ public:
 private:
 	int mWidth = 0, mHeight = 0, mBytesPerPixel = 0, mPitch = 0;
 	unsigned char* mData = nullptr;
-
-	void loadFromBMP(const std::string& filename, bool checkSize = true, bool masked = false);
 };
 
 class Texture {
 public:
 	Texture() = default;
-	Texture(const TextureImage& image, bool alpha = false, int maxLevels = -1) { load(image, alpha, maxLevels); }
+	Texture(Texture&& r) = default;
+	Texture(const TextureImage& image, bool alpha = false, bool bilinear = true, int maxLevels = 0) {
+		load(image, alpha, bilinear, maxLevels);
+	}
 	~Texture() { if (mID > 0) glDeleteTextures(1, &mID); }
 
-	void load(const TextureImage& image, bool alpha = false, int maxLevels = -1);
+	void load(const TextureImage& image, bool alpha = false, bool bilinear = true, int maxLevels = 0);
 	TextureID id() const { return mID; }
 	void bind() const { glBindTexture(GL_TEXTURE_2D, mID); }
 	static void unbind() { glBindTexture(GL_TEXTURE_2D, 0); }

@@ -3,76 +3,70 @@
 
 #include <string>
 #include <set>
+#include <map>
 #include <SDL2/SDL.h>
 #include "debug.h"
+#include "opengl.h"
 
 struct MouseState {
-	int x, y, wx, wy;
-	bool left, mid, right, locked;
+	int x = 0, y = 0, xd = 0, yd = 0;
+	bool left = false, mid = false, right = false;
 };
 
 class Window {
 public:
-	Window(const Window&) = delete;
+	Window(const std::string& title, int width, int height, bool resizable = true);
+	Window(Window&&) = default;
 	Window& operator=(const Window&) = delete;
+	~Window();
 
-	void makeCurrentDraw() const { SDL_GL_MakeCurrent(mWindow, mContext); }
+	void makeCurrent() const { SDL_GL_MakeCurrent(mWindow, mContext); }
 	void swapBuffers() const { SDL_GL_SwapWindow(mWindow); }
 
 	static const Uint8* getKeyBoardState() { return SDL_GetKeyboardState(nullptr); }
 	static bool isKeyPressed(SDL_Scancode c) { return getKeyBoardState()[c] != 0; }
-	static bool isKeyActed(SDL_Scancode c) { return mKeyActed.find(c) != mKeyActed.end(); }
+	bool isKeyActed(SDL_Scancode c) const { return mKeyActed.find(c) != mKeyActed.end(); }
 
 	int getWidth() const { return mWidth; }
 	int getHeight() const { return mHeight; }
 
-	MouseState getMouseState() const {
-		if (mMouse.locked) Assert(false); // Cursor locked, use getMouseMotion() instead!
-		return mMouse;
-	}
+	MouseState getMouseState() const { return mMouse; }
+	MouseState getPrevMouseState() const { return mPrevMouse; }
 
-	MouseState getPrevMouseState() const {
-		if (mMouse.locked) Assert(false); // Cursor locked, use getMouseMotion() instead!
-		return mPrevMouse;
-	}
-
-	MouseState getMouseMotion() const {
-		if (mMouse.locked) return mMouse;
-		MouseState res = mMouse;
-		res.x -= mPrevMouse.x;
-		res.y -= mPrevMouse.y;
-		return res;
-	}
-
-	void lockCursor() const { SDL_SetRelativeMouseMode(SDL_TRUE); }
-	void unlockCursor() const { SDL_SetRelativeMouseMode(SDL_FALSE); }
+	static void lockCursor() { SDL_SetRelativeMouseMode(SDL_TRUE); }
+	static void unlockCursor() { SDL_SetRelativeMouseMode(SDL_FALSE); }
 	void setTitle(const std::string& title) { SDL_SetWindowTitle(mWindow, title.c_str()); }
 	void setFullscreen(bool f) {
 		if (f) SDL_SetWindowFullscreen(mWindow, SDL_WINDOW_FULLSCREEN_DESKTOP);
 		else SDL_SetWindowFullscreen(mWindow, 0);
 	}
+	
+	bool shouldQuit() const { return mShouldQuit; }
+	SDL_Window* handle() const { return mWindow; }
 
-	void pollEvents(bool waitForEvent = false);
-
+	static void init();
+	static void cleanup();
+	static float getSystemScalingFactor(int displayIndex = 0);
+	static void pollEvents(bool waitForEvent = false);
+	
 	static Window& getDefaultWindow(const std::string& title = "", int width = 0, int height = 0) {
 		static Window win(title, width, height);
 		return win;
 	}
 
-	bool shouldQuit() const { return mShouldQuit; }
-
 private:
 	SDL_Window* mWindow = nullptr;
 	std::string mTitle;
 	int mWidth, mHeight;
-	MouseState mMouse, mPrevMouse;
 	bool mShouldQuit = false;
-	static std::set<SDL_Scancode> mKeyActed;
-
-	Window(const std::string& title, int width, int height);
-	~Window();
-
-	SDL_GLContext mContext;
+	MouseState mMouse, mPrevMouse;
+	std::set<SDL_Scancode> mKeyActed;
+	
+	static bool mContextCreated;
+	static SDL_GLContext mContext; // Use one context across all windows
+	static std::map<SDL_Window*, Window*> mWindows; // All windows
+	static bool mCoreProfile, mGLES, mDebugContext;
+	static int mSwapInterval;
 };
 
 #endif
